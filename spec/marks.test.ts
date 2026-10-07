@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, inject, it } from "vitest";
+import { hueFor } from "../src/render.ts";
 
 // The core interaction this crit is about: post a mark, it shows up, and it
 // distinguishes who left it. Everything here runs against the RUNNING app
@@ -181,12 +182,45 @@ it("rate-limits a second mark from the same visitor and says so", async () => {
 it("gives the same visitor the same hue, without exposing the visitor id", async () => {
   const visitor = randomUUID();
   const marker = `hue-${randomUUID()}`;
-  await postJson({ name: "Colour", body: marker }, visitor);
+  const { id } = await postJson({ name: "Colour", body: marker }, visitor);
   const html = await (await fetch(new URL("/", baseUrl))).text();
-  const hue = html.match(new RegExp(`--hue: (\\d+)">\\s*<p class="mark-head">[^]*?${marker}`));
-  expect(hue).not.toBeNull();
   expect(html).not.toContain(visitor);
-  // a second page load renders the same hue for that mark
-  const again = await (await fetch(new URL("/", baseUrl))).text();
-  expect(again).toContain(`style="--hue: ${hue![1]}">`);
+  // the hue on the page is the one derived from that visitor id, every time
+  expect(html).toContain(`id="mark-${id}" data-id="${id}" style="--hue: ${hueFor(visitor)}">`);
+  expect(hueFor(visitor)).toBe(hueFor(visitor));
+  const hues = new Set(Array.from({ length: 20 }, () => hueFor(randomUUID())));
+  expect(hues.size).toBeGreaterThan(1);
+});
+
+it("keeps a whole mark in one event when its body has a lone carriage return", async () => {
+  const marker = `cr-${randomUUID()}`;
+  const reading = readStreamUntil("/events", marker, 1000);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await postJson({ name: "Return", body: `head\r${marker}` });
+  const seen = await reading;
+  expect(seen).toContain(marker);
+  // EventSource treats a bare \r as a line break, which would split the mark
+  expect(seen).not.toMatch(/\r/);
+});
+
+it("replays only what came after Last-Event-ID, not the mark already seen", async () => {
+  const seenBody = `seen-${randomUUID()}`;
+  const first = await postJson({ name: "Seen", body: seenBody });
+  const marker = `after-${randomUUID()}`;
+  await postJson({ name: "After", body: marker });
+  const replay = await readStreamUntil("/events", marker, 1000, { "Last-Event-ID": String(first.id) });
+  expect(replay).toContain(marker);
+  expect(replay).not.toContain(seenBody);
+});
+
+it("shows a notice instead of failing silently when a mark is empty", async () => {
+  const res = await fetch(new URL("/", baseUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ name: "Blank", body: "   " }).toString(),
+    redirect: "manual",
+  });
+  expect(res.headers.get("location")).toBe("/?e=empty");
+  const html = await (await fetch(new URL("/?e=empty", baseUrl))).text();
+  expect(html).toContain("A mark needs a name and a few words.");
 });

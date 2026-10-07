@@ -28,7 +28,9 @@ function presentCount(): number {
 function send(res: ServerResponse, event: string, data: string, id?: number): void {
   let out = `event: ${event}\n`;
   if (id !== undefined) out += `id: ${id}\n`;
-  for (const line of data.split("\n")) out += `data: ${line}\n`;
+  // SSE ends a line at \r, \n or \r\n, so a lone \r in a mark's body would
+  // cut the event short unless every kind of break gets its own `data:` line.
+  for (const line of data.split(/\r\n|\r|\n/)) out += `data: ${line}\n`;
   res.write(`${out}\n`);
 }
 
