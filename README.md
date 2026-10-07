@@ -28,10 +28,27 @@ that's fine for a room this size. The wall doesn't paginate, filter, or rank
 --- it's short enough, for now, that reading top to bottom is the whole
 interface.
 
+## Live
+
+The wall is real-time: a mark posted in one tab appears in every other open
+tab within about a second, without a reload. It travels over server-sent
+events, the simplest thing that carries one direction of news, and needs no
+dependency. Reconnecting after a drop replays whatever you missed. The header
+shows whether you're connected and how many people are on the wall right now,
+as a count, never names. Why a count and not names is written up in
+[ADR 1: presence](https://github.com/comp4020-agentic-coding-studio/comp4020-riff8-bada-5/blob/main/docs/adr/0001-presence.md).
+
+The rest borrows from the small web's guestbooks, Atabook (123guestbook's
+successor) above all. Marks are numbered, show how long ago they were left,
+and can link your name to your own site. A few smileys turn into emoji. Each
+visitor gets a steady colour, taken from The Unsent Project, so you can spot
+one person's marks without an account. A hidden field and a limit of one mark every ten
+seconds keep bots and accidental double-posts off the wall.
+
 ## What's deliberately not here yet
 
-Real-time updates (crit 9's bar, not this one), server-side logging (crit
-11's), and any way to edit or delete a mark once it's posted. That last one
+Server-side logging (crit 11's bar), names in the presence count (see the
+ADR), and any way to edit or delete a mark once it's posted. That last one
 is a real decision, not an oversight: a home-cooked app doesn't need an undo
 button its author doesn't want, and a wall where marks are permanent is a
 simpler, more honest promise than one that pretends to be moderatable. If
