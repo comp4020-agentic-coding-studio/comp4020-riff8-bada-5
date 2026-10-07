@@ -35,6 +35,15 @@ auto_stop_machines = "stop"
 auto_start_machines = true
 min_machines_running = 0
 
+# Every open tab holds one /events stream open, so a connection here is a
+# person on the wall, not a page load. The app turns away streams past 200
+# itself (src/live.ts), with a 503 its client knows how to retry; these sit at
+# and above that so Fly's proxy never cuts in first.
+[http_service.concurrency]
+type = "connections"
+soft_limit = 200
+hard_limit = 250
+
 [[vm]]
 size = "shared-cpu-1x"
 memory = "256mb"
