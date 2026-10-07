@@ -118,6 +118,7 @@ export function page(title: string, body: string): string {
     border-radius: 1em;
     z-index: 1;
   }
+  .new-pill[hidden] { display: none; }
   ol.marks { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
   .mark {
     padding: 0.75rem 1rem;
